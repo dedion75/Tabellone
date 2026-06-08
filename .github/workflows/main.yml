@@ -5,17 +5,31 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Build APK with Buildozer
-        uses: ArtemGovorov/buildozer-action@v1
-        id: buildozer
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          command: buildozer -v android debug
-          buildozer_version: master
+          python-version: '3.10'
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v3
+      - name: Install Buildozer and Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install buildozer cython==0.29.36
+          sudo apt-get update
+          sudo apt-get install -y build-essential libltdl-dev libffi-dev libssl-dev autoconf libtool pkg-config zlib1g-dev python3-setuptools cmake openjdk-17-jdk-headless
+
+      - name: Generate Spec and Build
+        run: |
+          buildozer init
+          # Modifica automatica del file .spec per accettare le licenze e impostare i requisiti
+          sed -i 's/# android.accept_sdk_license = False/android.accept_sdk_license = True/' buildozer.spec
+          sed -i 's/requirements = python3,kivy/requirements = python3,kivy/' buildozer.spec
+          # Avvia la compilazione
+          buildozer -v android debug
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: package
-          path: ${{ steps.buildozer.outputs.filename }}
+          name: Dispensa-APK
+          path: bin/*.apk
